@@ -4,7 +4,7 @@ $destination = $PSScriptRoot
 New-Item -ItemType Directory -Path $destination -Force | Out-Null
 $output = Join-Path $destination 'NYUSynchronization.exe'
 & (Join-Path $framework 'csc.exe') /nologo /target:winexe /optimize+ "/out:$output" "/win32icon:$PSScriptRoot/NYUSynchronization.ico" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Security.dll "/reference:$framework/WPF/UIAutomationClient.dll" "/reference:$framework/WPF/UIAutomationTypes.dll" "/reference:$framework/WPF/WindowsBase.dll" (Join-Path $PSScriptRoot 'NYUSynchronization.cs')
-if($LASTEXITCODE -ne 0) { throw 'NYU Synchronization build failed' }
+if($LASTEXITCODE -ne 0) { throw 'NYU Sync build failed' }
 # Machine-local application locations; no secrets or shared configuration.
 if (-not ('NYUIni' -as [type])) {
     Add-Type @'
@@ -24,4 +24,4 @@ $visage = Join-Path $env:ProgramFiles 'Visage Imaging/Visage 7.1/bin/arch-Win/vs
 if(Test-Path -LiteralPath $visage) {
     [NYUIni]::WritePrivateProfileString('Paths','visage',$visage,$state) | Out-Null
 }
-Write-Output 'NYU Synchronization built successfully.'
+Write-Output 'NYU Sync built successfully.'

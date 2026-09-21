@@ -26,7 +26,7 @@ class Menu:
     def __init__(self):
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('NYU.Synchronization')
         self.root = tk.Tk()
-        self.root.title('NYU Synchronization')
+        self.root.title('NYU Sync')
         self.root.iconbitmap(str(Path(__file__).with_name('NYUSynchronization.ico')))
         self.root.configure(bg=BG)
         self.root.resizable(False, False)
@@ -34,7 +34,7 @@ class Menu:
         self.root.bind('<Escape>', lambda _: self.root.destroy())
         frame = tk.Frame(self.root, bg=BG, padx=20, pady=16)
         frame.pack(fill='both', expand=True)
-        tk.Label(frame, text='NYU Synchronization', bg=BG, fg=FG,
+        tk.Label(frame, text='NYU Sync', bg=BG, fg=FG,
                  font=('Segoe UI', 15, 'bold')).pack(anchor='w', pady=(0, 14))
         self.button(frame, 'Epic Secure Chat', 'chat', primary=True)
         tk.Label(frame, text='Start / Focus', bg=BG, fg=MUTED,

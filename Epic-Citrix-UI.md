@@ -133,7 +133,7 @@ Do not use guessed coordinates, replay old screenshot identifiers, or assume tha
 
 ## Related local implementation
 
-All files below are in `C:\Users\vg518\NYU Synchronization`. The app's purple tray icon opens a dark Tk menu on a single left-click. **Epic Secure Chat** brings Epic forward and opens this workspace; it does not create a patient-linked conversation or send a message.
+All files below are in `C:\Users\vg518\nyu-sync`. The app's purple tray icon opens a dark Tk menu on a single left-click. **Epic Secure Chat** brings Epic forward and opens this workspace; it does not create a patient-linked conversation or send a message.
 
 - [README.md](README.md): startup, retry behavior, local encrypted credential storage, and limitations.
 - `Start-NYUSynchronization.ahk`: tray app and existing file-sync launcher.
@@ -143,4 +143,4 @@ All files below are in `C:\Users\vg518\NYU Synchronization`. The app's purple tr
 
 The existing Windows sign-in shortcut launches the sync app. The app-folder shortcut `Launch-Epic.lnk`, used by the explicit Start / Focus control, launches Epic Slingshot using the installed Hyperspace launcher with `PublishedApplication=EpicProdSlingshot`. Epic itself is no longer launched at Windows sign-in or automatically reopened by its watcher.
 
-The watcher is now part of **NYU Synchronization**, which stores shared encrypted credentials and state under `%USERPROFILE%\NYU Synchronization\State`, outside Dropbox. See [README.md](README.md) for the password editor and current implementation. Never put credentials, decrypted payloads, patient conversation transcripts, or screenshots containing patient information into this UI guide.
+The watcher is now part of **NYU Sync**, which stores shared encrypted credentials and state under `%USERPROFILE%\nyu-sync\State`, outside Dropbox. See [README.md](README.md) for the password editor and current implementation. Never put credentials, decrypted payloads, patient conversation transcripts, or screenshots containing patient information into this UI guide.

@@ -1,11 +1,11 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
 NYUInitialize() {
     global NYU
     ; Track real user input so automated login keystrokes do not reset inactivity.
     InstallKeybdHook()
     InstallMouseHook()
-    dir := EnvGet("USERPROFILE") "\NYU Synchronization\State"
+    dir := A_ScriptDir "\State"
     DirCreate(dir)
     NYU := {dir: dir, state: dir "\watcher.ini", exe: A_ScriptDir "\NYUSynchronization.exe",
         pid: 0, settingsPID: 0, menuPID: 0, scanAt: 0, nextScan: 0, healthAt: 0, chatBusy: false,
@@ -27,7 +27,7 @@ NYUStart() {
 
 NYUMenu(*) {
     global NYU
-    if WinExist("NYU Synchronization ahk_exe pythonw.exe") {
+    if WinExist("NYU Sync ahk_exe pythonw.exe") {
         WinActivate()
         return
     }
@@ -35,7 +35,7 @@ NYUMenu(*) {
         return
     python := IniRead(NYU.state, "Paths", "Python", EnvGet("USERPROFILE") "\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\pythonw.exe")
     if !FileExist(python) {
-        MsgBox("Python with Tk is unavailable. Set Paths / Python in watcher.ini.", "NYU Synchronization")
+        MsgBox("Python with Tk is unavailable. Set Paths / Python in watcher.ini.", "NYU Sync")
         return
     }
     Run('"' python '" "' A_ScriptDir '\NYUTrayMenu.py"', , , &pid)
@@ -76,12 +76,12 @@ NYUStartFocus(app) {
         if app = "epic" {
             hwnd := EpicWindow()
             if !hwnd && WinExist("Epic - Prod ahk_exe wfica32.exe") {
-                MsgBox("More than one Epic window is open. Select the session from the taskbar.", "NYU Synchronization")
+                MsgBox("More than one Epic window is open. Select the session from the taskbar.", "NYU Sync")
                 return
             }
             path := A_ScriptDir "\Launch-Epic.lnk"
             if !hwnd && ProcessExist("Hyperspace.exe") {
-                MsgBox("Epic is already running or starting. Select its window from the taskbar.", "NYU Synchronization")
+                MsgBox("Epic is already running or starting. Select its window from the taskbar.", "NYU Sync")
                 return
             }
         } else {
@@ -89,7 +89,7 @@ NYUStartFocus(app) {
             hwnd := path != "" ? WinExist("ahk_exe " path) : 0
             name := app = "ps360" ? "Nuance.PowerScribe360.exe" : "vsclient.exe"
             if !hwnd && ProcessExist(name) {
-                MsgBox("The app is already running or starting, but no window is available yet.", "NYU Synchronization")
+                MsgBox("The app is already running or starting, but no window is available yet.", "NYU Sync")
                 return
             }
         }
@@ -102,13 +102,13 @@ NYUStartFocus(app) {
         if launched.Has(app) && A_TickCount - launched[app] < 30000
             return
         if !FileExist(path) {
-            MsgBox("The app launch path is unavailable. Rebuild NYU Synchronization to refresh installed paths.", "NYU Synchronization")
+            MsgBox("The app launch path is unavailable. Rebuild NYU Sync to refresh installed paths.", "NYU Sync")
             return
         }
         Run('"' path '"')
         launched[app] := A_TickCount
     } catch {
-        MsgBox("The app could not be opened. Check its installed path and try again.", "NYU Synchronization")
+        MsgBox("The app could not be opened. Check its installed path and try again.", "NYU Sync")
     }
 }
 
@@ -125,7 +125,7 @@ NYUOpenChat() {
     global NYU
     hwnd := EpicWindow()
     if !hwnd {
-        MsgBox("Open one Epic production window, then try again.", "NYU Synchronization")
+        MsgBox("Open one Epic production window, then try again.", "NYU Sync")
         return
     }
     WinActivate("ahk_id " hwnd)
@@ -156,7 +156,7 @@ NYUOpenChat() {
     }
     break
     }
-    MsgBox("Epic is in front. The Secure Chat button could not be identified; use the speech bubble in the top-right toolbar.", "NYU Synchronization")
+    MsgBox("Epic is in front. The Secure Chat button could not be identified; use the speech bubble in the top-right toolbar.", "NYU Sync")
 }
 
 NYUIdleReady() {
@@ -169,8 +169,8 @@ NYUInputPaused() {
     return IniRead(NYU.state, "Settings", "Paused", "0") = "1"
         || NYU.chatBusy
         || (NYU.settingsPID && ProcessExist(NYU.settingsPID))
-        || WinExist("NYU Synchronization ahk_exe NYUSynchronization.exe")
-        || WinExist("NYU Synchronization ahk_exe pythonw.exe")
+        || WinExist("NYU Sync ahk_exe NYUSynchronization.exe")
+        || WinExist("NYU Sync ahk_exe pythonw.exe")
 }
 
 NYUSettings(*) {

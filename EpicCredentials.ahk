@@ -1,12 +1,12 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
 EpicCredentialPath() {
-    return EnvGet("USERPROFILE") "\NYU Synchronization\State\credentials.dpapi"
+    return A_ScriptDir "\State\credentials.dpapi"
 }
 
 EpicEnsureCredentials() {
     if !FileExist(EpicCredentialPath())
-        throw Error("Set credentials in NYU Synchronization")
+        throw Error("Set credentials in NYU Sync")
 }
 
 EpicDataBlob(bytes) {

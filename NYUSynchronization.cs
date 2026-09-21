@@ -1,4 +1,4 @@
-﻿// Build with Build-NYUSynchronization.ps1. No credentials in arguments, logs, or shared files.
+// Build with Build-NYUSynchronization.ps1. No credentials in arguments, logs, or shared files.
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -12,7 +12,7 @@ using System.Windows.Forms;
 using System.Drawing;
 
 static class NYUSynchronization {
-    static readonly string Home = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "NYU Synchronization", "State");
+    static readonly string Home = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "State");
     static readonly string State = Path.Combine(Home, "watcher.ini");
     static readonly string Vault = Path.Combine(Home, "credentials.dpapi");
     [DllImport("kernel32", CharSet=CharSet.Unicode)] static extern uint GetPrivateProfileString(string section,string key,string def,StringBuilder value,uint size,string path);
@@ -154,7 +154,7 @@ static class NYUSynchronization {
     }
     static void Settings() {
         Application.EnableVisualStyles();
-        var form=new Form{Text="NYU Synchronization",ClientSize=new Size(510,500),StartPosition=FormStartPosition.CenterScreen,FormBorderStyle=FormBorderStyle.FixedDialog,MaximizeBox=false,Font=new Font("Segoe UI",10),AutoScaleMode=AutoScaleMode.Dpi};
+        var form=new Form{Text="NYU Sync",ClientSize=new Size(510,500),StartPosition=FormStartPosition.CenterScreen,FormBorderStyle=FormBorderStyle.FixedDialog,MaximizeBox=false,Font=new Font("Segoe UI",10),AutoScaleMode=AutoScaleMode.Dpi};
         form.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         var owner=new Label{Left=22,Top=18,Width=468,Text="Windows account: "+Environment.UserDomainName+"\\"+Environment.UserName};
         var userLabel=new Label{Left=22,Top=55,Width=120,Text="NYU username"};

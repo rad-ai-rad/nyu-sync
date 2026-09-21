@@ -1,11 +1,11 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
 #Include EpicCredentials.ahk
 ; Credentials are encrypted with Windows DPAPI in the local user profile.
 ; Machine-local retry state survives launcher restarts and is never synced.
 EpicMonitorStart() {
     global EW
-    localDir := EnvGet("USERPROFILE") "\NYU Synchronization\State"
+    localDir := A_ScriptDir "\State"
     DirCreate(localDir)
     EW := {paused: false, hwnd: 0, pid: 0, probeAt: 0, nextProbe: 0,
         launchAt: A_TickCount, launched: false, activated: false,
@@ -13,7 +13,7 @@ EpicMonitorStart() {
         state: localDir "\watcher.ini", status: "Starting"}
     try EpicEnsureCredentials()
     catch
-        EpicStatus("Set credentials in NYU Synchronization")
+        EpicStatus("Set credentials in NYU Sync")
     SetTimer(EpicWatchTick, 2000)
     EpicWatchTick()
 }
@@ -23,7 +23,7 @@ EpicStatus(message) {
     if EW.status != message
         IniWrite(message, EW.state, "Watcher", "Status")
     EW.status := message
-    A_IconTip := "NYU Synchronization`nEpic: " message
+    A_IconTip := "NYU Sync`nEpic: " message
 }
 
 EpicRetry(*) {
@@ -175,7 +175,7 @@ EpicHandleResult(hwnd, result) {
         return
     try credentials := EpicReadCredentials()
     catch {
-        EpicStatus("Set credentials in NYU Synchronization")
+        EpicStatus("Set credentials in NYU Sync")
         return
     }
     if !NYUIdleReady() || NYUInputPaused() || !WinActive(hwnd)

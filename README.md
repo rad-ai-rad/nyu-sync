@@ -143,3 +143,7 @@ Application presence is checked every three seconds independently of the idle ti
 ## Saved preferences
 
 File sync and Login watchers (all) save immediately in ProgramData and are restored on every start. The current defaults are file sync on and login watchers off. Changing either toggle updates the preference for future starts. Status observation continues while automatic logins are disabled.
+
+## Individual and all-watcher controls
+
+Epic, PowerScribe, and Visage each have an independent login-watcher checkbox in the tray menu and settings windows. The additional all-watchers control turns every watcher off when all are on, or turns every watcher on otherwise. File sync remains independent. Every choice saves immediately and is restored on future starts.

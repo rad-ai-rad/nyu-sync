@@ -70,7 +70,7 @@ EpicDesktopReady() {
 EpicWatchTick(*) {
     global EW
     try {
-        observe := EW.paused || NYUInputPaused() || !NYUIdleReady()
+        observe := EW.paused || (NYUInputPaused() || IniRead(EW.state, "Settings", "epic", "1") != "1") || !NYUIdleReady()
         if !EpicDesktopReady()
             return
         hwnd := EpicWindow()
@@ -187,28 +187,28 @@ EpicHandleResult(hwnd, result) {
         EpicStatus("Set credentials in NYU Sync")
         return
     }
-    if !NYUIdleReady() || NYUInputPaused() || !WinActive(hwnd)
+    if !NYUIdleReady() || (NYUInputPaused() || IniRead(EW.state, "Settings", "epic", "1") != "1") || !WinActive(hwnd)
         return
     ; Persist before sending: failures or a restarted watcher must not cause a lockout loop.
     IniWrite(1, EW.state, "Login", "Attempted")
     CoordMode("Mouse", "Window")
     Click(Integer(fields[4]), Integer(fields[5]))
     Sleep(200)
-    if !WinActive(hwnd) || !EpicDesktopReady() || !NYUIdleReady() || NYUInputPaused()
+    if !WinActive(hwnd) || !EpicDesktopReady() || !NYUIdleReady() || (NYUInputPaused() || IniRead(EW.state, "Settings", "epic", "1") != "1")
         return
     SendEvent("^a")
     SendText(credentials.user)
-    if !WinActive(hwnd) || !NYUIdleReady() || NYUInputPaused()
+    if !WinActive(hwnd) || !NYUIdleReady() || (NYUInputPaused() || IniRead(EW.state, "Settings", "epic", "1") != "1")
         return
     SendEvent("{Tab}")
     Sleep(200)
-    if !WinActive(hwnd) || !NYUIdleReady() || NYUInputPaused()
+    if !WinActive(hwnd) || !NYUIdleReady() || (NYUInputPaused() || IniRead(EW.state, "Settings", "epic", "1") != "1")
         return
     SendEvent("^a")
     SendText(credentials.password)
     credentials.password := ""
     Sleep(200)
-    if !WinActive(hwnd) || !NYUIdleReady() || NYUInputPaused()
+    if !WinActive(hwnd) || !NYUIdleReady() || (NYUInputPaused() || IniRead(EW.state, "Settings", "epic", "1") != "1")
         return
     Click(Integer(fields[6]), Integer(fields[7]))
     EpicStatus("Login submitted; checking")

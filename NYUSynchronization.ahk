@@ -20,6 +20,15 @@ NYUInitialize() {
         IniWrite(IniRead(NYU.state, "Settings", "FileSync", "1"), NYU.state, "Settings", "FileSync")
         IniWrite("1", NYU.state, "Settings", "WatcherToggleMigrated")
     }
+    if IniRead(NYU.state, "Settings", "IndividualWatchersMigrated", "0") != "1" {
+        if IniRead(NYU.state, "Settings", "WatcherToggleMigrated", "0") = "1" {
+            enabled := IniRead(NYU.state, "Settings", "Paused", "0") != "1"
+            for app in ["epic", "ps360", "visage"]
+                IniWrite(enabled ? "1" : "0", NYU.state, "Settings", app)
+        }
+        IniWrite("0", NYU.state, "Settings", "Paused")
+        IniWrite("1", NYU.state, "Settings", "IndividualWatchersMigrated")
+    }
     IniWrite("", NYU.state, "Menu", "Command")
     if !FileExist(NYU.exe) {
         ps := A_WinDir "\System32\WindowsPowerShell\v1.0\powershell.exe"
@@ -29,10 +38,7 @@ NYUInitialize() {
 
 NYUStart() {
     global NYU
-    if IniRead(NYU.state, "Settings", "Paused", "0") = "1"
-        A_TrayMenu.Uncheck("Login Watchers (All)")
-    else
-        A_TrayMenu.Check("Login Watchers (All)")
+    NYURefreshWatchers()
     SetTimer(NYUTick, 3000)
     SetTimer(NYUCommands, 200)
 }
@@ -74,10 +80,7 @@ NYUCommands(*) {
             if NYU.pid && ProcessExist(NYU.pid)
                 try ProcessClose(NYU.pid)
             NYU.pid := 0
-            if IniRead(NYU.state, "Settings", "Paused", "0") = "1"
-                A_TrayMenu.Uncheck("Login Watchers (All)")
-            else
-                A_TrayMenu.Check("Login Watchers (All)")
+            NYURefreshWatchers()
     }
 }
 
@@ -199,20 +202,50 @@ NYUSettings(*) {
     NYU.settingsPID := pid
 }
 
+NYUAllWatchersEnabled() {
+    global NYU
+    for app in ["epic", "ps360", "visage"]
+        if IniRead(NYU.state, "Settings", app, "1") != "1"
+            return false
+    return true
+}
+
+NYURefreshWatchers() {
+    global NYU
+    for app, label in Map("epic", "Epic Login Watcher", "ps360", "PowerScribe Login Watcher", "visage", "Visage Login Watcher") {
+        if IniRead(NYU.state, "Settings", app, "1") = "1"
+            A_TrayMenu.Check(label)
+        else
+            A_TrayMenu.Uncheck(label)
+    }
+    if NYUAllWatchersEnabled()
+        A_TrayMenu.Check("Login Watchers (All)")
+    else
+        A_TrayMenu.Uncheck("Login Watchers (All)")
+}
+
+NYUToggleWatcher(app, *) {
+    global NYU
+    enabled := IniRead(NYU.state, "Settings", app, "1") != "1"
+    IniWrite(enabled ? "1" : "0", NYU.state, "Settings", app)
+    NYUWatchersChanged()
+}
+
 NYUPause(*) {
     global NYU
-    paused := IniRead(NYU.state, "Settings", "Paused", "0") != "1"
-    IniWrite(paused ? "1" : "0", NYU.state, "Settings", "Paused")
-    if paused {
-        A_TrayMenu.Uncheck("Login Watchers (All)")
-        if NYU.pid && ProcessExist(NYU.pid)
-            try ProcessClose(NYU.pid)
-        NYU.pid := 0
-        EpicStatus("Paused")
-    } else {
-        A_TrayMenu.Check("Login Watchers (All)")
-        EpicStatus("Watching")
-    }
+    enabled := !NYUAllWatchersEnabled()
+    for app in ["epic", "ps360", "visage"]
+        IniWrite(enabled ? "1" : "0", NYU.state, "Settings", app)
+    NYUWatchersChanged()
+}
+
+NYUWatchersChanged() {
+    global NYU
+    if NYU.pid && ProcessExist(NYU.pid)
+        try ProcessClose(NYU.pid)
+    NYU.pid := 0
+    NYU.nextScan := 0
+    NYURefreshWatchers()
 }
 
 NYURetry(*) {

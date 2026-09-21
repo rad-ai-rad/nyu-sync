@@ -31,7 +31,7 @@ static class NYUSynchronization {
         var b=new StringBuilder(2048); GetPrivateProfileString(section,key,fallback,b,2048,State); return b.ToString();
     }
     static void Put(string section,string key,string value) { if(!WritePrivateProfileString(section,key,value,State)) throw new IOException(); }
-    static bool Enabled(string app) { return Get("Settings","Paused","0")!="1"; }
+    static bool Enabled(string app) { return Get("Settings",app,"1")=="1"; }
     static string[] ReadCredentials(string path) {
         byte[] encrypted=File.ReadAllBytes(path), plain=null;
         try {
@@ -143,7 +143,7 @@ static class NYUSynchronization {
             if(user.Current.ProcessId!=pid || password.Current.ProcessId!=pid || submit.Current.ProcessId!=pid || !submit.Current.IsEnabled || !password.Current.IsPassword) {
                 Status(app,"Login form verification failed");return;
             }
-            if(!DesktopReady() || Get("Settings","Paused","0")=="1")return;
+            if(!DesktopReady() || !Enabled(app) || Get("Settings","Paused","0")=="1")return;
             Put(app,"Attempted","1");
             Set(user,credentials[0]);
             if(!DesktopReady()) {Status(app,"Login interrupted; use Retry logins");return;}
@@ -164,8 +164,18 @@ static class NYUSynchronization {
         var pass=new TextBox{Left=150,Top=90,Width=330,UseSystemPasswordChar=true};
         var hint=new Label{Left=150,Top=120,Width=335,Height=34,Text="Leave blank to keep the saved password."};
         try{var c=ReadCredentials(Vault);user.Text=c[0];c[1]="";}catch{hint.Text="Enter your NYU username and password.";}
-        var watchers=new CheckBox{Left=22,Top=165,Width=440,Text="Login watchers (all)",Checked=Enabled("all")};
-        watchers.CheckedChanged+=(s,e)=>{Put("Settings","Paused",watchers.Checked?"0":"1");Put("Menu","Command","changed");};
+        var epic=new CheckBox{Left=22,Top=165,Width=140,Text="Citrix / Epic",Checked=Enabled("epic")};
+        var ps=new CheckBox{Left=185,Top=165,Width=155,Text="PowerScribe 360",Checked=Enabled("ps360")};
+        var visage=new CheckBox{Left=365,Top=165,Width=120,Text="Visage",Checked=Enabled("visage")};
+        var all=new Button{Left=22,Top=200,Width=250,Height=30};
+        bool refreshing=false;
+        Action updateWatchers=()=>{refreshing=true;try{epic.Checked=Enabled("epic");ps.Checked=Enabled("ps360");visage.Checked=Enabled("visage");all.Text=epic.Checked&&ps.Checked&&visage.Checked?"Turn all watchers off":"Turn all watchers on";}finally{refreshing=false;}};
+        Action<string,bool> toggle=(app,on)=>{if(refreshing)return;Put("Settings",app,on?"1":"0");Put("Menu","Command","changed");updateWatchers();};
+        epic.CheckedChanged+=(s,e)=>toggle("epic",epic.Checked);
+        ps.CheckedChanged+=(s,e)=>toggle("ps360",ps.Checked);
+        visage.CheckedChanged+=(s,e)=>toggle("visage",visage.Checked);
+        all.Click+=(s,e)=>{bool on=!(Enabled("epic")&&Enabled("ps360")&&Enabled("visage"));foreach(string app in new[]{"epic","ps360","visage"})Put("Settings",app,on?"1":"0");Put("Menu","Command","changed");updateWatchers();};
+        updateWatchers();
         var status=new Label{Left=22,Top=243,Width=463,Height=135};
         var note=new Label{Left=22,Top=388,Width=465,Height=42,Text="Login watchers pause while this window is open."};
         var retry=new Button{Left=22,Top=448,Width=125,Height=32,Text="Retry logins"};
@@ -173,7 +183,7 @@ static class NYUSynchronization {
         var close=new Button{Left=382,Top=448,Width=98,Height=32,Text="Close"};
         var timer=new System.Windows.Forms.Timer{Interval=2000};
         Action refresh=()=>status.Text="Epic: "+Get("Watcher","Status","Waiting")+"\nPowerScribe: "+Get("ps360","Status","Waiting")+"\nVisage: "+Get("visage","Status","Waiting")+"\nFile sync: "+Get("Sync","Status","Waiting");
-        timer.Tick+=(s,e)=>refresh();timer.Start();refresh();
+        timer.Tick+=(s,e)=>{refresh();updateWatchers();};timer.Start();refresh();
         retry.Click+=(s,e)=>{ResetAttempts();note.Text="One new login attempt enabled for each app.";};
         save.Click+=(s,e)=>{
             try {
@@ -188,7 +198,7 @@ static class NYUSynchronization {
             }catch{note.Text="Could not save. Check the username and password.";}
         };
         close.Click+=(s,e)=>form.Close();
-        form.Controls.AddRange(new Control[]{owner,userLabel,user,passLabel,pass,hint,watchers,status,note,retry,save,close});
+        form.Controls.AddRange(new Control[]{owner,userLabel,user,passLabel,pass,hint,epic,ps,visage,all,status,note,retry,save,close});
         form.FormClosed+=(s,e)=>{timer.Stop();timer.Dispose();pass.Clear();};
         Application.Run(form);
     }

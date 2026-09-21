@@ -48,13 +48,19 @@ class Menu:
             ).pack(side='left', fill='x', expand=True, padx=2)
         self.variables = {}
         for key, label, default in [('FileSync', 'Epic ↔ Visage file sync', '1'),
-                ('Paused', 'Login watchers (all)', '0')]:
-            var = tk.BooleanVar(value=(read('Settings', key, default) == '1') != (key == 'Paused'))
+                ('epic', 'Epic login watcher', '1'),
+                ('ps360', 'PowerScribe login watcher', '1'),
+                ('visage', 'Visage login watcher', '1')]:
+            var = tk.BooleanVar(value=read('Settings', key, default) == '1')
             self.variables[key] = (var, default)
             tk.Checkbutton(frame, text=label, variable=var, bg=BG, fg=FG,
                 activebackground=PANEL, activeforeground=FG, selectcolor=PANEL,
                 highlightcolor=PURPLE, font=('Segoe UI', 11), anchor='w',
                 command=lambda k=key, v=var: self.toggle(k, v)).pack(fill='x', pady=3)
+        self.all_watchers = tk.Button(frame, command=self.toggle_all,
+            bg=PANEL, fg=FG, activebackground=PURPLE, activeforeground=FG,
+            relief='flat', pady=7, font=('Segoe UI', 10))
+        self.all_watchers.pack(fill='x', pady=3)
         self.status = tk.Label(frame, bg=BG, fg=MUTED, justify='left', anchor='w',
                                wraplength=360, height=5, font=('Segoe UI', 9))
         self.status.pack(fill='x', pady=12)
@@ -95,7 +101,14 @@ class Menu:
             highlightcolor=PURPLE, font=('Segoe UI', 11), anchor='w').pack(fill='x', pady=3)
 
     def toggle(self, key, var):
-        write('Settings', key, '1' if var.get() != (key == 'Paused') else '0')
+        write('Settings', key, '1' if var.get() else '0')
+        write('Menu', 'Command', 'changed')
+
+    def toggle_all(self):
+        enabled = not all(read('Settings', key, '1') == '1'
+                          for key in ('epic', 'ps360', 'visage'))
+        for key in ('epic', 'ps360', 'visage'):
+            write('Settings', key, '1' if enabled else '0')
         write('Menu', 'Command', 'changed')
 
     def command(self, command):
@@ -104,7 +117,9 @@ class Menu:
 
     def refresh(self):
         for key, (var, default) in self.variables.items():
-            var.set((read('Settings', key, default) == '1') != (key == 'Paused'))
+            var.set(read('Settings', key, default) == '1')
+        all_on = all(read('Settings', key, '1') == '1' for key in ('epic', 'ps360', 'visage'))
+        self.all_watchers.configure(text='Turn all watchers off' if all_on else 'Turn all watchers on')
         statuses = [('Epic', 'Watcher'), ('PowerScribe', 'ps360'), ('Visage', 'visage'), ('File sync', 'Sync')]
         self.status.configure(text='\n'.join(f'{label}: {read(section, "Status", "Waiting")}' for label, section in statuses))
         self.root.after(1500, self.refresh)

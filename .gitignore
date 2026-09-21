@@ -1,0 +1,18 @@
+# Credentials and workstation-specific runtime state
+/State/
+*.dpapi
+*.ini
+.env
+.env.*
+
+# Local build outputs and Windows shortcuts
+*.exe
+*.dll
+*.pdb
+*.lnk
+
+# Temporary files and Python caches
+__pycache__/
+*.py[cod]
+*.log
+*.tmp

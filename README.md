@@ -28,9 +28,9 @@ The existing encrypted Epic record was migrated. The running app no longer reads
 
 - **Epic Secure Chat** brings the single Epic production window forward and opens Secure Chat. It identifies the three cyan toolbar buttons from a fresh capture, clicks the middle speech bubble, and checks for the Secure Chat heading. It allows one additional click if an open menu absorbed the first. It does not create a conversation, select a patient, or send a message. An unrecognized layout leaves Epic in front with a manual-navigation notice.
 - **Epic â†” Visage file sync** immediately saves the enabled setting; the supervisor stops or starts the file-transfer process on its next check (normally within three seconds). Disabled sync stays disabled across restarts.
-- Enable or disable each application independently.
+- Use **Login watchers (all)** to enable or disable login automation for Epic, PowerScribe, and Visage together.
 - **Start / Focus — Epic, PowerScribe, Visage** brings an existing window forward (restoring it if minimized), or launches the app when it is not running. Repeated launch clicks are limited while the app starts. Closed applications are never reopened by the watchers.
-- **Pause Login Watchers** pauses logins while file sync continues.
+- **Login Watchers (All)** is checked when login automation is enabled; turn it off to pause all logins while file sync continues.
 - **Retry Logins** permits one new attempt per application. Saving credentials also resets attempt limits.
 - **Restart file sync** (**Restart Sync** in the right-click menu) restarts the transfer process if file sync is enabled.
 - **Exit synchronization** (**Exit** in the right-click menu) stops the supervisor and file sync, not the clinical applications.
@@ -87,7 +87,7 @@ Both shortcuts target the AutoHotkey runtime, pass the quoted full path to `Star
 
 | Situation | Action |
 | --- | --- |
-| Login monitoring appears paused | Close the settings window and check **Pause Login Watchers** in the tray menu. |
+| Login monitoring appears paused | Close the settings window and check **Login Watchers (All)** in the tray menu. |
 | Login failed or was interrupted | Correct the stored credentials or finish the app's prompt, then choose **Retry Logins**. Repeated automatic attempts are deliberately limited. |
 | Running; authentication unverified | Inspect the application. This status does not establish that login succeeded. |
 | PowerScribe is loading its speaker profile | Allow profile loading to finish; authentication is confirmed when Explorer appears. |
@@ -131,6 +131,15 @@ Automatic app launch/relaunch has been removed from both watcher implementations
 
 ## One-minute inactivity gate — September 19, 2026
 
-Automatic application checks, Epic activation/maximization, and login actions now wait for **60 seconds without keyboard or mouse activity**. Resuming input stops pending watcher work; login steps recheck inactivity before continuing. File synchronization continues independently in the background. Manual Start / Focus and Epic Secure Chat respond immediately. This replaces the previous three-second threshold that could bring Epic forward during short pauses. These are session/login checks, not a guarantee against server-enforced timeouts.
+Epic activation/maximization and automatic login actions wait for **60 seconds without keyboard or mouse activity**. As of September 21, read-only status checks run independently of this gate. Resuming input stops pending watcher work; login steps recheck inactivity before continuing. File synchronization continues independently in the background. Manual Start / Focus and Epic Secure Chat respond immediately. This replaces the previous three-second threshold that could bring Epic forward during short pauses. These are session/login checks, not a guarantee against server-enforced timeouts.
 
 Validation for this change: native helper rebuilt successfully; AutoHotkey launcher check passed with physical keyboard/mouse hooks installed; one updated supervisor confirmed running. Startup still targets the consolidated launcher. No Windows reboot or deliberately induced clinical-session timeout was performed.
+
+
+## Live status — September 21, 2026
+
+Application presence is checked every three seconds independently of the idle timer, watcher checkboxes, and open panel. PowerScribe and Visage show **Not running** when their processes exit; a new process clears the previous authentication status. Read-only authentication checks continue about every 15 seconds, including while the panel is open or login watchers are disabled. Epic recognition uses a background capture without activating or maximizing its window. If recognition is unavailable, the panel reports **Running; authentication unverified**, rather than retaining an old authentication result. The checkboxes and one-minute inactivity gate still govern automatic login actions. These status checks never launch a clinical application or enter credentials.
+
+## Saved preferences
+
+File sync and Login watchers (all) save immediately in ProgramData and are restored on every start. The current defaults are file sync on and login watchers off. Changing either toggle updates the preference for future starts. Status observation continues while automatic logins are disabled.

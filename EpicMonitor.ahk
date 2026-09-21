@@ -70,35 +70,32 @@ EpicDesktopReady() {
 EpicWatchTick(*) {
     global EW
     try {
-        if EW.paused || NYUInputPaused() || !EpicDesktopReady() || !NYUIdleReady() {
+        observe := EW.paused || NYUInputPaused() || !NYUIdleReady()
+        if !EpicDesktopReady()
+            return
+        hwnd := EpicWindow()
+        if !hwnd {
+            EW.hwnd := 0
             if EW.pid && ProcessExist(EW.pid)
                 try ProcessClose(EW.pid)
             EW.pid := 0
-            try FileDelete(EW.result)
-            return
-        }
-        if IniRead(EW.state, "Settings", "epic", "1") != "1" {
-            EpicStatus("Disabled")
-            return
-        }
-        hwnd := EpicWindow()
-        if !hwnd {
             EpicStatus("Not running; use Start / Focus")
             return
         }
         if EW.hwnd != hwnd {
+            EpicStatus("Running; authentication unverified")
             EW.hwnd := hwnd
             EW.activated := false
             EW.nextProbe := 0
         }
-        if WinGetMinMax(hwnd) != 1 {
+        if !observe && WinGetMinMax(hwnd) != 1 {
             if !NYUIdleReady()
                 return
             WinMaximize(hwnd)
             EW.nextProbe := A_TickCount + 3000
             return
         }
-        if !EW.activated && NYUIdleReady() {
+        if !observe && !EW.activated && NYUIdleReady() {
             WinActivate(hwnd)
             EW.activated := true
             EW.nextProbe := A_TickCount + 3000
@@ -117,14 +114,26 @@ EpicWatchTick(*) {
             if FileExist(EW.result) {
                 result := Trim(FileRead(EW.result))
                 FileDelete(EW.result)
-                if EW.probeHwnd = hwnd
-                    EpicHandleResult(hwnd, result)
+                if EW.probeHwnd = hwnd {
+                    if result = "authenticated"
+                        EpicHandleResult(hwnd, result)
+                    else if observe || EW.probeObserve {
+                        if SubStr(result, 1, 6) = "login,"
+                            EpicStatus("Running; login required")
+                        else if result = "attention"
+                            EpicStatus("Login needs attention")
+                        else
+                            EpicStatus("Running; authentication unverified")
+                    } else
+                        EpicHandleResult(hwnd, result)
+                }
             }
         }
         if A_TickCount < EW.nextProbe
             return
         EW.nextProbe := A_TickCount + 15000
         EW.probeAt := A_TickCount
+        EW.probeObserve := observe
         EW.probeHwnd := hwnd
         EW.probeForeground := !!WinActive(hwnd)
         ps := A_WinDir "\System32\WindowsPowerShell\v1.0\powershell.exe"

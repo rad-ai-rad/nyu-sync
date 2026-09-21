@@ -8,8 +8,18 @@ NYUInitialize() {
     dir := A_ScriptDir "\State"
     DirCreate(dir)
     NYU := {dir: dir, state: dir "\watcher.ini", exe: A_ScriptDir "\NYUSynchronization.exe",
-        pid: 0, settingsPID: 0, menuPID: 0, scanAt: 0, nextScan: 0, healthAt: 0, chatBusy: false,
+        pid: 0, observing: false, settingsPID: 0, menuPID: 0, scanAt: 0, nextScan: 0, healthAt: 0, chatBusy: false,
         generation: IniRead(dir "\watcher.ini", "Settings", "RetryGeneration", "")}
+    ; Preserve the existing effective preference once, then use one persisted toggle.
+    if IniRead(NYU.state, "Settings", "WatcherToggleMigrated", "0") != "1" {
+        enabled := false
+        for app in ["epic", "ps360", "visage"]
+            enabled := enabled || IniRead(NYU.state, "Settings", app, "1") = "1"
+        paused := IniRead(NYU.state, "Settings", "Paused", "0") = "1" || !enabled
+        IniWrite(paused ? "1" : "0", NYU.state, "Settings", "Paused")
+        IniWrite(IniRead(NYU.state, "Settings", "FileSync", "1"), NYU.state, "Settings", "FileSync")
+        IniWrite("1", NYU.state, "Settings", "WatcherToggleMigrated")
+    }
     IniWrite("", NYU.state, "Menu", "Command")
     if !FileExist(NYU.exe) {
         ps := A_WinDir "\System32\WindowsPowerShell\v1.0\powershell.exe"
@@ -20,7 +30,9 @@ NYUInitialize() {
 NYUStart() {
     global NYU
     if IniRead(NYU.state, "Settings", "Paused", "0") = "1"
-        A_TrayMenu.Check("Pause Login Watchers")
+        A_TrayMenu.Uncheck("Login Watchers (All)")
+    else
+        A_TrayMenu.Check("Login Watchers (All)")
     SetTimer(NYUTick, 3000)
     SetTimer(NYUCommands, 200)
 }
@@ -63,9 +75,9 @@ NYUCommands(*) {
                 try ProcessClose(NYU.pid)
             NYU.pid := 0
             if IniRead(NYU.state, "Settings", "Paused", "0") = "1"
-                A_TrayMenu.Check("Pause Login Watchers")
+                A_TrayMenu.Uncheck("Login Watchers (All)")
             else
-                A_TrayMenu.Uncheck("Pause Login Watchers")
+                A_TrayMenu.Check("Login Watchers (All)")
     }
 }
 
@@ -192,13 +204,13 @@ NYUPause(*) {
     paused := IniRead(NYU.state, "Settings", "Paused", "0") != "1"
     IniWrite(paused ? "1" : "0", NYU.state, "Settings", "Paused")
     if paused {
-        A_TrayMenu.Check("Pause Login Watchers")
+        A_TrayMenu.Uncheck("Login Watchers (All)")
         if NYU.pid && ProcessExist(NYU.pid)
             try ProcessClose(NYU.pid)
         NYU.pid := 0
         EpicStatus("Paused")
     } else {
-        A_TrayMenu.Uncheck("Pause Login Watchers")
+        A_TrayMenu.Check("Login Watchers (All)")
         EpicStatus("Watching")
     }
 }
@@ -233,11 +245,12 @@ NYUTick(*) {
             IniWrite(health, NYU.state, "Sync", "Status")
             }
         }
-        if NYUInputPaused() || !NYUIdleReady() {
+        NYUProcessStatus()
+        observe := NYUInputPaused() || !NYUIdleReady()
+        if observe && !NYU.observing {
             if NYU.pid && ProcessExist(NYU.pid)
                 try ProcessClose(NYU.pid)
             NYU.pid := 0
-            return
         }
         generation := IniRead(NYU.state, "Settings", "RetryGeneration", "")
         if generation != NYU.generation {
@@ -255,11 +268,12 @@ NYUTick(*) {
             }
             return
         }
-        if A_TickCount < NYU.nextScan || !EpicDesktopReady() || !NYUIdleReady()
+        if A_TickCount < NYU.nextScan || !EpicDesktopReady()
             return
         NYU.scanAt := A_TickCount
         NYU.nextScan := A_TickCount + 15000
-        Run('"' NYU.exe '" --scan', , "Hide", &pid)
+        NYU.observing := observe
+        Run('"' NYU.exe '" ' (observe ? "--observe" : "--scan"), , "Hide", &pid)
         NYU.pid := pid
     } catch {
         ; Do not write exception details or UI content to logs.
@@ -276,4 +290,18 @@ NYUStop() {
         try ProcessClose(NYU.menuPID)
     if NYU.pid && ProcessExist(NYU.pid)
         try ProcessClose(NYU.pid)
+}
+
+; Presence polling never activates windows or waits for user inactivity.
+NYUProcessStatus() {
+    global NYU
+    static previous := Map()
+    for app, name in Map("ps360", "Nuance.PowerScribe360.exe", "visage", "vsclient.exe") {
+        pid := ProcessExist(name)
+        if !pid
+            IniWrite("Not running", NYU.state, app, "Status")
+        else if !previous.Has(app) || previous[app] != pid
+            IniWrite("Running; authentication unverified", NYU.state, app, "Status")
+        previous[app] := pid
+    }
 }

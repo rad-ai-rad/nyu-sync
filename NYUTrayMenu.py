@@ -48,10 +48,8 @@ class Menu:
             ).pack(side='left', fill='x', expand=True, padx=2)
         self.variables = {}
         for key, label, default in [('FileSync', 'Epic ↔ Visage file sync', '1'),
-                ('epic', 'Epic login watcher', '1'), ('ps360', 'PowerScribe login watcher', '1'),
-                ('visage', 'Visage login watcher', '1'),
-                ('Paused', 'Pause login watchers', '0')]:
-            var = tk.BooleanVar(value=read('Settings', key, default) == '1')
+                ('Paused', 'Login watchers (all)', '0')]:
+            var = tk.BooleanVar(value=(read('Settings', key, default) == '1') != (key == 'Paused'))
             self.variables[key] = (var, default)
             tk.Checkbutton(frame, text=label, variable=var, bg=BG, fg=FG,
                 activebackground=PANEL, activeforeground=FG, selectcolor=PANEL,
@@ -97,7 +95,7 @@ class Menu:
             highlightcolor=PURPLE, font=('Segoe UI', 11), anchor='w').pack(fill='x', pady=3)
 
     def toggle(self, key, var):
-        write('Settings', key, '1' if var.get() else '0')
+        write('Settings', key, '1' if var.get() != (key == 'Paused') else '0')
         write('Menu', 'Command', 'changed')
 
     def command(self, command):
@@ -106,7 +104,7 @@ class Menu:
 
     def refresh(self):
         for key, (var, default) in self.variables.items():
-            var.set(read('Settings', key, default) == '1')
+            var.set((read('Settings', key, default) == '1') != (key == 'Paused'))
         statuses = [('Epic', 'Watcher'), ('PowerScribe', 'ps360'), ('Visage', 'visage'), ('File sync', 'Sync')]
         self.status.configure(text='\n'.join(f'{label}: {read(section, "Status", "Waiting")}' for label, section in statuses))
         self.root.after(1500, self.refresh)

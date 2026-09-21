@@ -31,7 +31,7 @@ static class NYUSynchronization {
         var b=new StringBuilder(2048); GetPrivateProfileString(section,key,fallback,b,2048,State); return b.ToString();
     }
     static void Put(string section,string key,string value) { if(!WritePrivateProfileString(section,key,value,State)) throw new IOException(); }
-    static bool Enabled(string app) { return Get("Settings",app,"1")=="1"; }
+    static bool Enabled(string app) { return Get("Settings","Paused","0")!="1"; }
     static string[] ReadCredentials(string path) {
         byte[] encrypted=File.ReadAllBytes(path), plain=null;
         try {
@@ -80,17 +80,17 @@ static class NYUSynchronization {
     }
     static void Status(string app,string value) { Put(app,"Status",value); Put(app,"Checked",DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")); }
     static string VisageId(string suffix) { return "VisageLayoutBase.mContent.stackedWidget.page."+suffix; }
-    static void Scan(string app) {
-        if(!DesktopReady() || Get("Settings","Paused","0")=="1")return;
-        if(!Enabled(app)) {Status(app,"Disabled"); return;}
+    static void Scan(string app, bool observe) {
+        observe = observe || !Enabled(app);
+        if(!observe && (!DesktopReady() || Get("Settings","Paused","0")=="1"))return;
         string processName=app=="ps360"?"Nuance.PowerScribe360":"vsclient";
         string expected=Get("Paths",app,"");
-        if(expected=="" || !File.Exists(expected)) {Status(app,"Application path needs configuration");return;}
         var processes=Process.GetProcessesByName(processName);
         if(processes.Length==0) {
             Status(app,"Not running");
             return;
         }
+        if(expected=="" || !File.Exists(expected)) {Status(app,"Running; application path needs configuration");return;}
         var matches=processes.Where(p=> {try{return String.Equals(p.MainModule.FileName,expected,StringComparison.OrdinalIgnoreCase);}catch{return false;}}).ToArray();
         if(matches.Length!=1) {Status(app,"Multiple or unrecognized processes; waiting");return;}
         int pid=matches[0].Id;
@@ -133,6 +133,7 @@ static class NYUSynchronization {
             var wait=ById(loginRoot,"labelWait");
             Status(app,wait!=null && wait.Current.Name=="Loading local speaker profile..."?"Signed in; loading speaker profile":"Login in progress");return;
         }
+        if(observe) {Status(app,"Running; login required");return;}
         if(Get(app,"Attempted","0")=="1") {Status(app,"Login already attempted; check app or Retry logins");return;}
         if(!DesktopReady()) {Status(app,"Login ready; waiting for idle desktop");return;}
         if(!File.Exists(Vault)) {Status(app,"Set NYU credentials");return;}
@@ -163,9 +164,8 @@ static class NYUSynchronization {
         var pass=new TextBox{Left=150,Top=90,Width=330,UseSystemPasswordChar=true};
         var hint=new Label{Left=150,Top=120,Width=335,Height=34,Text="Leave blank to keep the saved password."};
         try{var c=ReadCredentials(Vault);user.Text=c[0];c[1]="";}catch{hint.Text="Enter your NYU username and password.";}
-        var epic=new CheckBox{Left=22,Top=165,Width=140,Text="Citrix / Epic",Checked=Enabled("epic")};
-        var ps=new CheckBox{Left=185,Top=165,Width=155,Text="PowerScribe 360",Checked=Enabled("ps360")};
-        var visage=new CheckBox{Left=365,Top=165,Width=120,Text="Visage",Checked=Enabled("visage")};
+        var watchers=new CheckBox{Left=22,Top=165,Width=440,Text="Login watchers (all)",Checked=Enabled("all")};
+        watchers.CheckedChanged+=(s,e)=>{Put("Settings","Paused",watchers.Checked?"0":"1");Put("Menu","Command","changed");};
         var status=new Label{Left=22,Top=243,Width=463,Height=135};
         var note=new Label{Left=22,Top=388,Width=465,Height=42,Text="Login watchers pause while this window is open."};
         var retry=new Button{Left=22,Top=448,Width=125,Height=32,Text="Retry logins"};
@@ -184,12 +184,11 @@ static class NYUSynchronization {
                     secret=old[1];old[1]="";
                 }
                 SaveCredentials(Vault,username,secret);secret="";pass.Clear();
-                Put("Settings","epic",epic.Checked?"1":"0");Put("Settings","ps360",ps.Checked?"1":"0");Put("Settings","visage",visage.Checked?"1":"0");
                 ResetAttempts();note.Text="Saved with Windows encryption for this account.";
             }catch{note.Text="Could not save. Check the username and password.";}
         };
         close.Click+=(s,e)=>form.Close();
-        form.Controls.AddRange(new Control[]{owner,userLabel,user,passLabel,pass,hint,epic,ps,visage,status,note,retry,save,close});
+        form.Controls.AddRange(new Control[]{owner,userLabel,user,passLabel,pass,hint,watchers,status,note,retry,save,close});
         form.FormClosed+=(s,e)=>{timer.Stop();timer.Dispose();pass.Clear();};
         Application.Run(form);
     }
@@ -209,11 +208,13 @@ static class NYUSynchronization {
         Directory.CreateDirectory(Home);
         try {
             if(args.Length>0 && args[0]=="--self-test")return SelfTest();
+            bool observe=args.Length>0 && args[0]=="--observe";
+            bool scan=observe || (args.Length>0 && args[0]=="--scan");
             using(var gate=new Mutex(false,"Local\\NYUSynchronization.Settings")) {
-            if(!gate.WaitOne(args.Length>0 && args[0]=="--scan"?0:30000))return 0;
-            try { if(args.Length>0 && args[0]=="--scan") {
-                if(Get("Settings","Paused","0")=="1")return 0;
-                foreach(string app in new[]{"ps360","visage"})try{Scan(app);}catch{Status(app,"Check app; automatic login unavailable");}
+            if(!gate.WaitOne(scan?0:30000))return 0;
+            try { if(scan) {
+                if(!observe && Get("Settings","Paused","0")=="1")return 0;
+                foreach(string app in new[]{"ps360","visage"})try{Scan(app,observe);}catch{Status(app,"Check app; automatic login unavailable");}
             }else Settings();
             }finally{gate.ReleaseMutex();}
             }
